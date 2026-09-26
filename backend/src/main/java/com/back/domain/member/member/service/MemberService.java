@@ -6,6 +6,7 @@ import com.back.global.exception.ServiceException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 import java.util.Map;
@@ -24,13 +25,23 @@ public class MemberService {
     }
 
     public Member join(String username, String password, String nickname) {
-
         memberRepository.findByUsername(username)
                 .ifPresent(m -> {
                     throw new ServiceException("409-1", "이미 사용중인 아이디입니다.");
                 });
 
         Member member = new Member(username, passwordEncoder.encode(password), nickname);
+        return memberRepository.save(member);
+    }
+
+    public Member join(String username, String password, String nickname, String profileImgUrl) {
+
+        memberRepository.findByUsername(username)
+                .ifPresent(m -> {
+                    throw new ServiceException("409-1", "이미 사용중인 아이디입니다.");
+                });
+
+        Member member = new Member(username, passwordEncoder.encode(password), nickname, profileImgUrl);
         return memberRepository.save(member);
     }
 
@@ -62,5 +73,16 @@ public class MemberService {
         if(!passwordEncoder.matches(inputPassword, rawPassword)) {
             throw new ServiceException("401-2", "비밀번호가 일치하지 않습니다.");
         }
+    }
+
+    public Member modifyOrJoin(String username, String password, String nickname, String profileImgUrl) {
+        Member member = memberRepository.findByUsername(username).orElse(null);
+
+        if (member == null) {
+            return join(username, password, nickname, profileImgUrl);
+        }
+        member.update(nickname, profileImgUrl);
+
+        return member;
     }
 }
